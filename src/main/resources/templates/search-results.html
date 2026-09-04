@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>UniFilm - Search Results</title>
+
+    <link rel="stylesheet"
+          href="/css/style.css">
+
+</head>
+
+
+<body>
+
+
+<!-- TOP BAR -->
+
+<header class="top-bar">
+
+    <a href="/" class="logo">
+        UniFilm
+    </a>
+
+</header>
+
+
+
+<main class="search-page">
+
+
+    <!-- SEARCH BAR -->
+
+    <div class="search-container">
+
+        <div class="search-input-wrapper">
+
+            <input
+                    class="search-bar"
+                    id="searchBar"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Search for a movie or anime..."
+            >
+
+            <button
+                    class="clear-search"
+                    id="clearSearch"
+                    type="button">
+                ✕
+            </button>
+
+        </div>
+
+
+        <div
+                id="searchResults"
+                class="search-results">
+        </div>
+
+    </div>
+
+
+
+    <!-- SEARCH TITLE -->
+
+    <h1
+            class="search-page-title"
+            id="searchTitle">
+        RESULTS FOR:
+    </h1>
+
+
+
+    <!-- FULL RESULTS -->
+
+    <div
+            id="fullResults"
+            class="full-results">
+
+        <p class="search-message">
+            Loading results...
+        </p>
+
+    </div>
+
+
+</main>
+
+
+
+<script>
+
+    const searchBar =
+        document.getElementById("searchBar");
+
+
+    const clearSearch =
+        document.getElementById("clearSearch");
+
+
+    const searchResults =
+        document.getElementById("searchResults");
+
+
+    const fullResults =
+        document.getElementById("fullResults");
+
+
+    const searchTitle =
+        document.getElementById("searchTitle");
+
+
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+
+    const query =
+        params.get("query") || "";
+
+
+
+    searchBar.value =
+        query;
+
+
+    updateClearButton();
+
+
+
+    searchTitle.textContent =
+        `RESULTS FOR: "${query}"`;
+
+
+
+    /* ---------- CLEAR BUTTON ---------- */
+
+    function updateClearButton() {
+
+        if (
+            searchBar.value.trim() !== ""
+        ) {
+
+            clearSearch.style.display =
+                "block";
+
+        } else {
+
+            clearSearch.style.display =
+                "none";
+
+        }
+
+    }
+
+
+
+    searchBar.addEventListener(
+        "input",
+        updateClearButton
+    );
+
+
+
+    clearSearch.addEventListener(
+        "click",
+        function() {
+
+            searchBar.value = "";
+
+            searchResults.innerHTML = "";
+
+            searchResults.style.display =
+                "none";
+
+            clearSearch.style.display =
+                "none";
+
+            searchBar.focus();
+
+        }
+    );
+
+
+
+    /* ---------- ENTER NEW SEARCH ---------- */
+
+    searchBar.addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key !== "Enter"
+            ) {
+                return;
+            }
+
+
+            const newQuery =
+                searchBar.value.trim();
+
+
+            if (
+                newQuery === ""
+            ) {
+                return;
+            }
+
+
+            window.location.href =
+                `/search?query=${encodeURIComponent(newQuery)}`;
+
+        }
+    );
+
+
+
+    /* ---------- LOAD ALL RESULTS ---------- */
+
+    async function loadResults() {
+
+        if (
+            query.trim() === ""
+        ) {
+
+            fullResults.innerHTML =
+                "<p class='search-message'>Enter a movie name to search.</p>";
+
+            return;
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/movies/search?query=${encodeURIComponent(query)}`
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Search request failed"
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            displayResults(
+                data.results
+            );
+
+
+        } catch (error) {
+
+            console.error(error);
+
+
+            fullResults.innerHTML =
+                "<p class='search-message'>Something went wrong while searching. Please try again.</p>";
+
+        }
+
+    }
+
+
+
+    /* ---------- DISPLAY RESULTS ---------- */
+
+    function displayResults(movies) {
+
+        fullResults.innerHTML = "";
+
+
+        if (
+            !movies ||
+            movies.length === 0
+        ) {
+
+            fullResults.innerHTML =
+                "<p class='search-message'>No movies found.</p>";
+
+            return;
+
+        }
+
+
+        movies.forEach(
+            function(movie) {
+
+                const movieCard =
+                    document.createElement("div");
+
+
+                movieCard.classList.add(
+                    "full-movie-card"
+                );
+
+
+                const poster =
+                    movie.poster_path
+                        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                        : null;
+
+
+                const year =
+                    movie.release_date
+                        ? movie.release_date.substring(0, 4)
+                        : "Unknown year";
+
+
+                movieCard.innerHTML = `
+
+                    ${
+                        poster
+                            ? `
+                                <img
+                                    src="${poster}"
+                                    alt="${movie.title}">
+                              `
+                            : `
+                                <div class="full-no-poster">
+                                    No Poster
+                                </div>
+                              `
+                    }
+
+
+                    <div class="full-movie-info">
+
+                        <h2>
+                            ${movie.title}
+                        </h2>
+
+
+                        <p>
+                            ${year}
+                        </p>
+
+
+                        <p>
+                            ⭐ ${
+                                movie.vote_average
+                                    ? movie.vote_average.toFixed(1)
+                                    : "N/A"
+                            }
+                        </p>
+
+
+                        <p class="full-overview">
+
+                            ${
+                                movie.overview
+                                    || "No overview available."
+                            }
+
+                        </p>
+
+                    </div>
+
+                `;
+
+
+                movieCard.addEventListener(
+                    "click",
+                    function() {
+
+                        window.location.href =
+                            `/movie/${movie.id}`;
+
+                    }
+                );
+
+
+                fullResults.appendChild(
+                    movieCard
+                );
+
+            }
+        );
+
+    }
+
+
+
+    loadResults();
+
+</script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>UniFilm - Movie</title>
+
+    <link rel="stylesheet"
+          href="/css/style.css">
+
+</head>
+
+
+<body>
+
+
+<!-- TOP BAR -->
+
+<header class="top-bar">
+
+    <a href="/" class="logo">
+        UniFilm
+    </a>
+
+</header>
+
+
+
+<!-- MOVIE DETAILS -->
+
+<main class="movie-page">
+
+    <div id="movieDetails">
+
+        <p class="loading">
+            Loading movie...
+        </p>
+
+    </div>
+
+</main>
+
+
+
+<script>
+
+    const movieId =
+        window.location.pathname.split("/").pop();
+
+
+    async function loadMovie() {
+
+        const movieDetails =
+            document.getElementById("movieDetails");
+
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/movies/${movieId}`
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Could not load movie"
+                );
+
+            }
+
+
+            const movie =
+                await response.json();
+
+
+            displayMovie(movie);
+
+
+        } catch (error) {
+
+            console.error(error);
+
+
+            movieDetails.innerHTML = `
+
+                <div class="movie-error">
+
+                    <h2>
+                        Something went wrong
+                    </h2>
+
+                    <p>
+                        We couldn't load this movie.
+                    </p>
+
+                    <button
+                        onclick="history.back()">
+                        Go Back
+                    </button>
+
+                </div>
+
+            `;
+
+        }
+
+    }
+
+
+
+    function displayMovie(movie) {
+
+        const poster =
+            movie.poster_path
+                ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+                : null;
+
+
+        const genres =
+            movie.genres
+                ? movie.genres
+                    .map(genre => genre.name)
+                    .join(" • ")
+                : "Unknown";
+
+
+        const year =
+            movie.release_date
+                ? movie.release_date.substring(0, 4)
+                : "Unknown";
+
+
+        document.getElementById(
+            "movieDetails"
+        ).innerHTML = `
+
+            <div class="movie-details-card">
+
+
+                ${
+                    poster
+                        ? `
+                            <img
+                                class="movie-details-poster"
+                                src="${poster}"
+                                alt="${movie.title}">
+                          `
+                        : `
+                            <div class="movie-details-no-poster">
+                                No Poster
+                            </div>
+                          `
+                }
+
+
+                <div class="movie-details-info">
+
+                    <h1>
+                        ${movie.title}
+                    </h1>
+
+
+                    <div class="movie-meta">
+
+                        <span>
+                            ${year}
+                        </span>
+
+                        <span>
+                            ⭐ ${
+                                movie.vote_average
+                                    ? movie.vote_average.toFixed(1)
+                                    : "N/A"
+                            }
+                        </span>
+
+                    </div>
+
+
+                    <p class="movie-genres">
+                        ${genres}
+                    </p>
+
+
+                    <p class="movie-overview">
+
+                        ${
+                            movie.overview
+                                || "No overview available."
+                        }
+
+                    </p>
+
+
+                    <button
+                        class="add-list-button"
+                        id="addListButton">
+
+                        + Add to My List
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- CHAT ROOMS -->
+
+            <section class="movie-chat-section">
+
+                <h2>
+                    Discuss this movie
+                </h2>
+
+
+                <div class="chat-room-row">
+
+
+                    <div class="chat-room liked-room">
+
+                        <h3>
+                            💚 Liked it
+                        </h3>
+
+                        <p>
+                            Talk with people who liked
+                            this movie.
+                        </p>
+
+                        <button>
+                            Enter Room
+                        </button>
+
+                    </div>
+
+
+                    <div class="chat-room mixed-room">
+
+                        <h3>
+                            🤷 Mixed
+                        </h3>
+
+                        <p>
+                            Talk with people who were
+                            somewhere in the middle.
+                        </p>
+
+                        <button>
+                            Enter Room
+                        </button>
+
+                    </div>
+
+
+                    <div class="chat-room disliked-room">
+
+                        <h3>
+                            👎 Didn't like it
+                        </h3>
+
+                        <p>
+                            Talk with people who didn't
+                            like this movie.
+                        </p>
+
+                        <button>
+                            Enter Room
+                        </button>
+
+                    </div>
+
+
+                </div>
+
+            </section>
+
+        `;
+
+             setupMyListButton(movie);
+
+    }
+
+
+        async function setupMyListButton(movie) {
+
+        const button =
+            document.getElementById("addListButton");
+
+
+        if (!button) {
+            return;
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/my-list/check?movieId=${movie.id}`
+                );
+
+
+            const inList =
+                await response.json();
+
+
+            if (inList) {
+
+                button.textContent =
+                    "✓ In My List";
+
+                button.classList.add(
+                    "in-list"
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Could not check My List:",
+                error
+            );
+
+        }
+
+
+        button.addEventListener(
+            "click",
+            async function() {
+
+                if (
+                    button.classList.contains(
+                        "in-list"
+                    )
+                ) {
+
+                    const response =
+                        await fetch(
+                            "/api/my-list/remove",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/x-www-form-urlencoded"
+                                },
+
+                                body:
+                                    `movieId=${encodeURIComponent(movie.id)}`
+                            }
+                        );
+
+
+                    if (response.ok) {
+
+                        button.textContent =
+                            "+ Add to My List";
+
+                        button.classList.remove(
+                            "in-list"
+                        );
+
+                    }
+
+                    return;
+
+                }
+
+
+                const response =
+                    await fetch(
+                        "/api/my-list/add",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+
+                            body:
+                                `movieId=${encodeURIComponent(movie.id)}` +
+                                `&title=${encodeURIComponent(movie.title)}` +
+                                `&posterPath=${encodeURIComponent(movie.poster_path || "")}`
+                        }
+                    );
+
+
+                const result =
+                    await response.text();
+
+
+                if (
+                    result === "added" ||
+                    result === "already"
+                ) {
+
+                    button.textContent =
+                        "✓ In My List";
+
+                    button.classList.add(
+                        "in-list"
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    loadMovie();
+
+</script>
+
+
+</body>
+
+</html>
